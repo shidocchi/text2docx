@@ -10,6 +10,8 @@ __version__ = '0.1'
 class Text2Docx:
   """text typesetter"""
 
+  NEWPAGE = '\x0C'
+
   FONT = {
     'lc': 'Lucida Console',
     'lst': 'Lucida Sans Typewriter',
@@ -28,9 +30,8 @@ class Text2Docx:
   def __init__(self, st) -> None:
     self.set_args()
     self.doc = Document()
-    self.doc.add_paragraph(st.read())
-    self.set_section(self.doc.sections[0])
     self.set_style(self.doc.styles['Normal'])
+    self.typeset(st)
 
   def set_args(self) -> None:
     parser = argparse.ArgumentParser(
@@ -74,6 +75,32 @@ class Text2Docx:
     self.doc.save(self.args.out)
     if self.args.do:
       os.startfile(self.args.out, operation=self.args.do)
+
+  def typeset(self, st):
+    for page in self.pagination(st):
+      if page == self.NEWPAGE:
+        self.doc.add_page_break()
+      else:
+        self.doc.add_paragraph(page)
+        self.set_section(self.doc.sections[-1])
+
+  def pagination(self, st):
+    page = []
+    for line in st:
+      while True:
+        part = line.partition(self.NEWPAGE)
+        page.append(part[0])
+        if part[1] == '':
+          break
+        else:
+          yield ''.join(page)
+          yield self.NEWPAGE
+          page = []
+          line = part[2]
+          if not line.rstrip():
+            break
+    if page:
+      yield ''.join(page)
 
 if __name__ == '__main__':
   d = Text2Docx(sys.stdin)
