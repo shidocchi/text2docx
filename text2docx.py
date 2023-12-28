@@ -6,7 +6,7 @@ from docx.shared import Mm, Pt
 from docx.oxml.ns import qn
 from docx.enum.section import WD_ORIENT
 
-__version__ = '0.1'
+__version__ = '0.1.1'
 
 class Text2Docx:
   """text typesetter"""
