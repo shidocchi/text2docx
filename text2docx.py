@@ -40,6 +40,8 @@ class Text2Docx:
 
   def __init__(self, st) -> None:
     self.set_args()
+    if not self.args.raw:
+      st = io.TextIOWrapper(st.buffer, encoding='utf-8')
     self.doc = Document()
     self.set_style(self.doc.styles['Normal'])
     self.typeset(st)
@@ -48,6 +50,8 @@ class Text2Docx:
     parser = argparse.ArgumentParser(
       prog='python -m text2docx',
       description='text typesetter')
+    parser.add_argument('--raw', help='suppress stdin encoding',
+      action='store_true')
     parser.add_argument('--out', help='output filename',
       default='output.docx')
     parser.add_argument('--page', help='page size',
@@ -121,6 +125,5 @@ class Text2Docx:
       yield ''.join(page)
 
 if __name__ == '__main__':
-  sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
   d = Text2Docx(sys.stdin)
   d.save()
