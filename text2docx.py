@@ -1,3 +1,4 @@
+import io
 import os
 import sys
 import argparse
@@ -120,5 +121,6 @@ class Text2Docx:
       yield ''.join(page)
 
 if __name__ == '__main__':
+  sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
   d = Text2Docx(sys.stdin)
   d.save()
