@@ -4,6 +4,7 @@ import argparse
 from docx import Document
 from docx.shared import Mm, Pt
 from docx.oxml.ns import qn
+from docx.enum.section import WD_ORIENT
 
 __version__ = '0.1'
 
@@ -11,6 +12,15 @@ class Text2Docx:
   """text typesetter"""
 
   NEWPAGE = '\x0C'
+
+  PAGE = {
+    'a3': (297, 420),
+    'b4': (257, 364),
+    'a4': (210, 297),
+    'b5': (182, 257),
+    'a5': (148, 210),
+    'hagaki': (100, 148),
+  }
 
   FONT = {
     'lc': 'Lucida Console',
@@ -35,13 +45,14 @@ class Text2Docx:
 
   def set_args(self) -> None:
     parser = argparse.ArgumentParser(
-      prog='text2docx',
+      prog='python -m text2docx',
       description='text typesetter')
     parser.add_argument('--out', help='output filename',
       default='output.docx')
-    parser.add_argument('--page', help='page size mm',
-      default=(210,297), type=float,
-      nargs=2, metavar=('width','height'))
+    parser.add_argument('--page', help='page size',
+      default='a4', choices=self.PAGE.keys())
+    parser.add_argument('--landscape', help='landscape',
+      action='store_true')
     parser.add_argument('--margin', help='margin mm',
       default=(10,10,10,10), type=float,
       nargs=4, metavar=('top','bottom','left','right'))
@@ -56,8 +67,14 @@ class Text2Docx:
     self.args = parser.parse_args()
 
   def set_section(self, sect) -> None:
-    (sect.page_width,
-     sect.page_height) = map(Mm, self.args.page)
+    if self.args.landscape:
+      sect.orientation = WD_ORIENT.LANDSCAPE
+      (sect.page_height,
+       sect.page_width) = map(Mm, self.PAGE[self.args.page])
+    else:
+      sect.orientation = WD_ORIENT.PORTRAIT
+      (sect.page_width,
+       sect.page_height) = map(Mm, self.PAGE[self.args.page])
     (sect.top_margin,
      sect.bottom_margin,
      sect.left_margin,
