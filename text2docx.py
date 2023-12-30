@@ -39,14 +39,14 @@ class Text2Docx:
   }
 
   def __init__(self, st) -> None:
-    self.set_args()
+    self.args = self.get_args()
     if not self.args.raw:
       st = io.TextIOWrapper(st.buffer, encoding='utf-8')
     self.doc = Document()
     self.set_style(self.doc.styles['Normal'])
     self.typeset(st)
 
-  def set_args(self) -> None:
+  def get_args(self) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
       prog='python -m text2docx',
       description='text typesetter')
@@ -69,7 +69,7 @@ class Text2Docx:
       default='hge', choices=self.EAFONT.keys())
     parser.add_argument('--do', help='operation',
       choices=['print', 'edit', 'open'])
-    self.args = parser.parse_args()
+    return parser.parse_args()
 
   def set_section(self, sect) -> None:
     if self.args.landscape:
