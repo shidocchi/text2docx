@@ -2,6 +2,7 @@ import io
 import os
 import sys
 import argparse
+from typing import Iterator
 from docx import Document
 from docx.shared import Mm, Pt
 from docx.oxml import OxmlElement
@@ -107,14 +108,14 @@ class Text2Docx:
     if self.args.do:
       os.startfile(self.args.out, operation=self.args.do)
 
-  def typeset(self, st):
+  def typeset(self, st) -> None:
     for page in self.pagination(st):
       if page == self.NEWPAGE:
         self.doc.add_page_break()
       else:
         self.doc.add_paragraph(page)
 
-  def pagination(self, st):
+  def pagination(self, st) -> Iterator[str]:
     page = []
     for line in st:
       while True:
@@ -132,14 +133,14 @@ class Text2Docx:
     if page:
       yield ''.join(page)
 
-  def set_number(self, par):
+  def set_number(self, par) -> None:
     par.add_run('[Page ')
     self.add_field(par, 'PAGE')
     par.add_run('/')
     self.add_field(par, 'NUMPAGES')
     par.add_run(']')
 
-  def add_field(self, par, text):
+  def add_field(self, par, text) -> None:
     run = par.add_run()
     run._r.append(OxmlElement('w:fldChar'))
     run._r[-1].set(qn('w:fldCharType'), 'begin')
