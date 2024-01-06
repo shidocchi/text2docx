@@ -4,10 +4,12 @@ import sys
 import argparse
 from docx import Document
 from docx.shared import Mm, Pt
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.enum.section import WD_ORIENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 class Text2Docx:
   """text typesetter"""
@@ -43,6 +45,7 @@ class Text2Docx:
     if not self.args.raw:
       st = io.TextIOWrapper(st.buffer, encoding='utf-8')
     self.doc = Document()
+    self.set_section(self.doc.sections[0])
     self.set_style(self.doc.styles['Normal'])
     self.typeset(st)
 
@@ -67,6 +70,8 @@ class Text2Docx:
       default='lc',  choices=self.FONT.keys())
     parser.add_argument('--eafont', help='eastasia font',
       default='hge', choices=self.EAFONT.keys())
+    parser.add_argument('--number', help='page number on header',
+      action='store_true')
     parser.add_argument('--do', help='operation',
       choices=['print', 'edit', 'open'])
     return parser.parse_args()
@@ -86,6 +91,10 @@ class Text2Docx:
      sect.right_margin) = map(Mm, self.args.margin)
     (sect.header_distance,
      sect.footer_distance) = map(Mm, [5, 5])
+    if self.args.number:
+      par = sect.header.paragraphs[0]
+      par.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+      self.set_number(par)
 
   def set_style(self, sty) -> None:
     sty.font.size = Pt(self.args.size)
@@ -104,7 +113,6 @@ class Text2Docx:
         self.doc.add_page_break()
       else:
         self.doc.add_paragraph(page)
-        self.set_section(self.doc.sections[-1])
 
   def pagination(self, st):
     page = []
@@ -123,6 +131,22 @@ class Text2Docx:
             break
     if page:
       yield ''.join(page)
+
+  def set_number(self, par):
+    par.add_run('[Page ')
+    self.add_field(par, 'PAGE')
+    par.add_run('/')
+    self.add_field(par, 'NUMPAGES')
+    par.add_run(']')
+
+  def add_field(self, par, text):
+    run = par.add_run()
+    run._r.append(OxmlElement('w:fldChar'))
+    run._r[-1].set(qn('w:fldCharType'), 'begin')
+    run._r.append(OxmlElement('w:instrText'))
+    run._r[-1].text = text
+    run._r.append(OxmlElement('w:fldChar'))
+    run._r[-1].set(qn('w:fldCharType'), 'end')
 
 if __name__ == '__main__':
   d = Text2Docx(sys.stdin)
