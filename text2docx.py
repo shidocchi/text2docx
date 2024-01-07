@@ -11,7 +11,7 @@ from docx.oxml.ns import qn
 from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 class Text2Docx:
   """text typesetter"""
