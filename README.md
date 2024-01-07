@@ -31,9 +31,6 @@ optional arguments:
   --number              page number on header
   --do {print,edit,open}
                         operation
-  --number              page number on header
-  --header HEADER       header
-  --footer FOOTER       footer
 ```
 
 ```
