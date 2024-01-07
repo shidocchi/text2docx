@@ -1,5 +1,6 @@
 import io
 import os
+import re
 import sys
 import argparse
 from typing import Iterator
@@ -41,6 +42,15 @@ class Text2Docx:
     'ms': 'ＭＳ ゴシック',
   }
 
+  HEAD_NUMBER = ' [Page {PAGE}/{NUMPAGES}]'
+  head_parser = re.compile(r'(\{\w+\})|([^{}]*)')
+  HEAD_ALIGN = {
+    (False, False): WD_ALIGN_PARAGRAPH.CENTER,
+    (True, False):  WD_ALIGN_PARAGRAPH.RIGHT,
+    (False, True):  WD_ALIGN_PARAGRAPH.LEFT,
+    (True, True):   WD_ALIGN_PARAGRAPH.CENTER,
+  }
+
   def __init__(self, st) -> None:
     self.args = self.get_args()
     if not self.args.raw:
@@ -71,10 +81,13 @@ class Text2Docx:
       default='lc',  choices=self.FONT.keys())
     parser.add_argument('--eafont', help='eastasia font',
       default='hge', choices=self.EAFONT.keys())
-    parser.add_argument('--number', help='page number on header',
-      action='store_true')
     parser.add_argument('--do', help='operation',
       choices=['print', 'edit', 'open'])
+    head_args = parser.add_mutually_exclusive_group()
+    head_args.add_argument('--number', help='page number on header',
+      action='store_true')
+    head_args.add_argument('--header', help='header')
+    parser.add_argument('--footer', help='footer')
     return parser.parse_args()
 
   def set_section(self, sect) -> None:
@@ -93,9 +106,11 @@ class Text2Docx:
     (sect.header_distance,
      sect.footer_distance) = map(Mm, [5, 5])
     if self.args.number:
-      par = sect.header.paragraphs[0]
-      par.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-      self.set_number(par)
+      self.set_head(sect.header, self.HEAD_NUMBER)
+    elif self.args.header:
+      self.set_head(sect.header, self.args.header)
+    if self.args.footer:
+      self.set_head(sect.footer, self.args.footer)
 
   def set_style(self, sty) -> None:
     sty.font.size = Pt(self.args.size)
@@ -133,12 +148,14 @@ class Text2Docx:
     if page:
       yield ''.join(page)
 
-  def set_number(self, par) -> None:
-    par.add_run('[Page ')
-    self.add_field(par, 'PAGE')
-    par.add_run('/')
-    self.add_field(par, 'NUMPAGES')
-    par.add_run(']')
+  def set_head(self, head, fcode) -> None:
+    par = head.paragraphs[0]
+    par.alignment = self.HEAD_ALIGN[(fcode.startswith(' '), fcode.endswith(' '))]
+    for m in self.head_parser.finditer(fcode):
+      if m.group(1):
+        self.add_field(par, m.group(1)[1:-1])
+      else:
+        par.add_run(m.group(2))
 
   def add_field(self, par, text) -> None:
     run = par.add_run()
