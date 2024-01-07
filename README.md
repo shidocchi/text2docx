@@ -28,6 +28,7 @@ optional arguments:
   --font {lc,lst}       font
   --eafont {biz,hg,hge,hgm,meiryo,yu,ms}
                         eastasia font
+  --number              page number on header
   --do {print,edit,open}
                         operation
   --number              page number on header

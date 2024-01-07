@@ -81,6 +81,8 @@ class Text2Docx:
       default='lc',  choices=self.FONT.keys())
     parser.add_argument('--eafont', help='eastasia font',
       default='hge', choices=self.EAFONT.keys())
+    parser.add_argument('--number', help='page number on header',
+      action='store_true')
     parser.add_argument('--do', help='operation',
       choices=['print', 'edit', 'open'])
     head_args = parser.add_mutually_exclusive_group()
