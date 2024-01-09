@@ -54,7 +54,7 @@ class Text2Docx:
   def __init__(self, textin) -> None:
     self.args = self.get_args()
     if not self.args.raw:
-      textin = io.TextinWrapper(textin.buffer, encoding='utf-8')
+      textin = io.TextIOWrapper(textin.buffer, encoding='utf-8')
     self.doc = Document()
     self.set_section(self.doc.sections[0])
     self.set_style(self.doc.styles['Normal'])
@@ -125,7 +125,7 @@ class Text2Docx:
     if self.args.do:
       os.startfile(self.args.out, operation=self.args.do)
 
-  def typeset(self, textin, sep=self.PAGESEP) -> None:
+  def typeset(self, textin, sep=PAGESEP) -> None:
     for page in self.paginate(textin, sep):
       if page == sep:
         self.doc.add_page_break()
