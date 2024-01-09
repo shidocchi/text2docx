@@ -16,7 +16,7 @@ __version__ = '0.1.4'
 class Text2Docx:
   """text typesetter"""
 
-  NEWPAGE = '\x0C'
+  PAGESEP = '\x0C'
 
   PAGE = {
     'a3': (297, 420),
@@ -51,14 +51,14 @@ class Text2Docx:
     (True, True):   WD_ALIGN_PARAGRAPH.CENTER,
   }
 
-  def __init__(self, st) -> None:
+  def __init__(self, textin) -> None:
     self.args = self.get_args()
     if not self.args.raw:
-      st = io.TextIOWrapper(st.buffer, encoding='utf-8')
+      textin = io.TextinWrapper(textin.buffer, encoding='utf-8')
     self.doc = Document()
     self.set_section(self.doc.sections[0])
     self.set_style(self.doc.styles['Normal'])
-    self.typeset(st)
+    self.typeset(textin)
 
   def get_args(self) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -66,21 +66,20 @@ class Text2Docx:
       description='text typesetter')
     parser.add_argument('--raw', help='suppress stdin encoding',
       action='store_true')
-    parser.add_argument('--out', help='output filename',
-      default='output.docx')
+    parser.add_argument('--out', help='output filename')
     parser.add_argument('--page', help='page size',
-      default='a4', choices=self.PAGE.keys())
+      choices=self.PAGE.keys())
     parser.add_argument('--landscape', help='landscape',
       action='store_true')
     parser.add_argument('--margin', help='margin mm',
-      default=(10,10,10,10), type=float,
+      type=float,
       nargs=4, metavar=('top','bottom','left','right'))
     parser.add_argument('--size', help='font pt',
-      default=14, type=float)
+      type=float)
     parser.add_argument('--font', help='font',
-      default='lc',  choices=self.FONT.keys())
+      choices=self.FONT.keys())
     parser.add_argument('--eafont', help='eastasia font',
-      default='hge', choices=self.EAFONT.keys())
+      choices=self.EAFONT.keys())
     parser.add_argument('--do', help='operation',
       choices=['print', 'edit', 'open'])
     head_args = parser.add_mutually_exclusive_group()
@@ -88,6 +87,9 @@ class Text2Docx:
       action='store_true')
     head_args.add_argument('--header', help='header')
     parser.add_argument('--footer', help='footer')
+    parser.set_defaults(out='output.docx')
+    parser.set_defaults(page='a4', margin=(10,10,10,10))
+    parser.set_defaults(size=14, font='lc', eafont='hge')
     return parser.parse_args()
 
   def set_section(self, sect) -> None:
@@ -123,24 +125,24 @@ class Text2Docx:
     if self.args.do:
       os.startfile(self.args.out, operation=self.args.do)
 
-  def typeset(self, st) -> None:
-    for page in self.pagination(st):
-      if page == self.NEWPAGE:
+  def typeset(self, textin, sep=self.PAGESEP) -> None:
+    for page in self.paginate(textin, sep):
+      if page == sep:
         self.doc.add_page_break()
       else:
         self.doc.add_paragraph(page)
 
-  def pagination(self, st) -> Iterator[str]:
+  def paginate(self, textin, sep) -> Iterator[str]:
     page = []
-    for line in st:
+    for line in textin:
       while True:
-        part = line.partition(self.NEWPAGE)
+        part = line.partition(sep)
         page.append(part[0])
         if part[1] == '':
           break
         else:
           yield ''.join(page)
-          yield self.NEWPAGE
+          yield sep
           page = []
           line = part[2]
           if not line.rstrip():
