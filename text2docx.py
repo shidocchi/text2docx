@@ -51,6 +51,11 @@ class Text2Docx:
     (True, True):   WD_ALIGN_PARAGRAPH.CENTER,
   }
 
+  SAMPLE = [
+    'The quick brown fox jumps over the lazy dog',
+    '色は匂へど散りぬるを我が世誰ぞ常ならむ有為の奥山今日越えて浅き夢見し酔ひもせず',
+  ]
+
   def __init__(self, textin) -> None:
     self.args = self.get_args()
     if not self.args.raw:
@@ -58,7 +63,10 @@ class Text2Docx:
     self.doc = Document()
     self.set_section(self.doc.sections[0])
     self.set_style(self.doc.styles['Normal'])
-    self.typeset(textin)
+    if self.args.sample:
+      self.set_sample()
+    else:
+      self.typeset(textin)
 
   def get_args(self) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -80,6 +88,8 @@ class Text2Docx:
       choices=self.FONT.keys())
     parser.add_argument('--eafont', help='eastasia font',
       choices=self.EAFONT.keys())
+    parser.add_argument('--sample', help='font sample',
+      action='store_true')
     parser.add_argument('--do', help='operation',
       choices=['print', 'edit', 'open'])
     head_args = parser.add_mutually_exclusive_group()
@@ -167,6 +177,27 @@ class Text2Docx:
     run._r[-1].text = text
     run._r.append(OxmlElement('w:fldChar'))
     run._r[-1].set(qn('w:fldCharType'), 'end')
+
+  def set_sample(self):
+    table = self.doc.add_table(rows=1, cols=2)
+    hdr = table.rows[0].cells
+    hdr[0].text = 'font name'
+    hdr[1].text = ''
+    for k,fn in self.FONT.items():
+      row = table.add_row().cells
+      row[0].width = Mm(50)
+      row[1].width = Mm(150)
+      row[0].text = '{0} ({1})'.format(fn,k)
+      r = row[1].paragraphs[0].add_run(self.SAMPLE[0])
+      r.font.name = fn
+    for k,fn in self.EAFONT.items():
+      row = table.add_row().cells
+      row[0].width = Mm(50)
+      row[1].width = Mm(150)
+      row[0].text = '{0} ({1})'.format(fn,k)
+      r = row[1].paragraphs[0].add_run(self.SAMPLE[1])
+      r.font.name = self.FONT['lc']
+      r._element.rPr.rFonts.set(qn('w:eastAsia'), fn)
 
 if __name__ == '__main__':
   d = Text2Docx(sys.stdin)
