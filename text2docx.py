@@ -63,6 +63,8 @@ class Text2Docx:
     self.doc = Document()
     self.set_section(self.doc.sections[0])
     self.set_style(self.doc.styles['Normal'])
+    if self.args.col:
+      self.set_multicolumn(self.doc.sections[0], self.args.col)
     if self.args.sample:
       self.set_sample()
     else:
@@ -82,6 +84,9 @@ class Text2Docx:
     parser.add_argument('--margin', help='margin mm',
       type=float,
       nargs=4, metavar=('top','bottom','left','right'))
+    parser.add_argument('--col', help='multi column',
+      type=int,
+      choices=(2,3))
     parser.add_argument('--size', help='font pt',
       type=float)
     parser.add_argument('--font', help='font',
@@ -123,6 +128,11 @@ class Text2Docx:
       self.set_head(sect.header, self.args.header)
     if self.args.footer:
       self.set_head(sect.footer, self.args.footer)
+
+  def set_multicolumn(self, sect, num) -> None:
+    sectPr = sect._sectPr
+    cols = sectPr.xpath('./w:cols')[0]
+    cols.set(qn('w:num'), str(num))
 
   def set_style(self, sty) -> None:
     sty.font.size = Pt(self.args.size)
