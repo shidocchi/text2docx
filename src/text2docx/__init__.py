@@ -185,6 +185,3 @@ class Text2Docx:
       r.font.name = self.conf['font']['lc']
       r._element.rPr.rFonts.set(qn('w:eastAsia'), fn)
 
-if __name__ == '__main__':
-  d = Text2Docx(sys.stdin)
-  d.save()
