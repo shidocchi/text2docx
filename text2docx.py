@@ -3,6 +3,8 @@ import os
 import re
 import sys
 import argparse
+import yaml
+from pathlib import Path
 from typing import Iterator
 from docx import Document
 from docx.shared import Mm, Pt
@@ -11,52 +13,21 @@ from docx.oxml.ns import qn
 from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-__version__ = '0.1.5'
+__version__ = '0.2.0'
 
 class Text2Docx:
   """text typesetter"""
 
-  PAGESEP = '\x0C'
-
-  PAGE = {
-    'a3': (297, 420),
-    'b4': (257, 364),
-    'a4': (210, 297),
-    'b5': (182, 257),
-    'a5': (148, 210),
-    'hagaki': (100, 148),
-  }
-
-  FONT = {
-    'lc': 'Lucida Console',
-    'lst': 'Lucida Sans Typewriter',
-  }
-
-  EAFONT = {
-    'biz': 'BIZ UDゴシック',
-    'hg': 'HGｺﾞｼｯｸ',
-    'hge': 'HGｺﾞｼｯｸE',
-    'hgm': 'HGｺﾞｼｯｸM',
-    'meiryo': 'メイリオ',
-    'yu': '游ゴシック',
-    'ms': 'ＭＳ ゴシック',
-  }
-
-  HEAD_NUMBER = ' [Page {PAGE}/{NUMPAGES}]'
   head_parser = re.compile(r'(\{\w+\})|([^{}]*)')
-  HEAD_ALIGN = {
+  head_align = {
     (False, False): WD_ALIGN_PARAGRAPH.CENTER,
     (True, False):  WD_ALIGN_PARAGRAPH.RIGHT,
     (False, True):  WD_ALIGN_PARAGRAPH.LEFT,
     (True, True):   WD_ALIGN_PARAGRAPH.CENTER,
   }
 
-  SAMPLE = [
-    'The quick brown fox jumps over the lazy dog',
-    '色は匂へど散りぬるを我が世誰ぞ常ならむ有為の奥山今日越えて浅き夢見し酔ひもせず',
-  ]
-
   def __init__(self, textin) -> None:
+    self.conf = self.load_conf()
     self.args = self.get_args()
     if not self.args.raw:
       textin = io.TextIOWrapper(textin.buffer, encoding='utf-8')
@@ -70,6 +41,12 @@ class Text2Docx:
     else:
       self.typeset(textin)
 
+  def load_conf(self) -> dict:
+    fpath = Path(__file__).resolve().parent / 'config.yaml'
+    with open(fpath, 'r', encoding='utf8') as f:
+      conf = yaml.safe_load(f)
+    return conf
+
   def get_args(self) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
       prog='python -m text2docx',
@@ -78,7 +55,7 @@ class Text2Docx:
       action='store_true')
     parser.add_argument('--out', help='output filename')
     parser.add_argument('--page', help='page size',
-      choices=self.PAGE.keys())
+      choices=self.conf['page'].keys())
     parser.add_argument('--landscape', help='landscape',
       action='store_true')
     parser.add_argument('--margin', help='margin mm',
@@ -90,9 +67,9 @@ class Text2Docx:
     parser.add_argument('--size', help='font pt',
       type=float)
     parser.add_argument('--font', help='font',
-      choices=self.FONT.keys())
+      choices=self.conf['font'].keys())
     parser.add_argument('--eafont', help='eastasia font',
-      choices=self.EAFONT.keys())
+      choices=self.conf['eafont'].keys())
     parser.add_argument('--sample', help='font sample',
       action='store_true')
     parser.add_argument('--do', help='operation',
@@ -102,20 +79,18 @@ class Text2Docx:
       action='store_true')
     head_args.add_argument('--header', help='header')
     parser.add_argument('--footer', help='footer')
-    parser.set_defaults(out='output.docx')
-    parser.set_defaults(page='a4', margin=(10,10,10,10))
-    parser.set_defaults(size=14, font='lc', eafont='hge')
+    parser.set_defaults(**self.conf['default'])
     return parser.parse_args()
 
   def set_section(self, sect) -> None:
     if self.args.landscape:
       sect.orientation = WD_ORIENT.LANDSCAPE
       (sect.page_height,
-       sect.page_width) = map(Mm, self.PAGE[self.args.page])
+       sect.page_width) = map(Mm, self.conf['page'][self.args.page])
     else:
       sect.orientation = WD_ORIENT.PORTRAIT
       (sect.page_width,
-       sect.page_height) = map(Mm, self.PAGE[self.args.page])
+       sect.page_height) = map(Mm, self.conf['page'][self.args.page])
     (sect.top_margin,
      sect.bottom_margin,
      sect.left_margin,
@@ -123,7 +98,7 @@ class Text2Docx:
     (sect.header_distance,
      sect.footer_distance) = map(Mm, [5, 5])
     if self.args.number:
-      self.set_head(sect.header, self.HEAD_NUMBER)
+      self.set_head(sect.header, self.conf['head_number'])
     elif self.args.header:
       self.set_head(sect.header, self.args.header)
     if self.args.footer:
@@ -136,16 +111,17 @@ class Text2Docx:
 
   def set_style(self, sty) -> None:
     sty.font.size = Pt(self.args.size)
-    sty.font.name = self.FONT.get(self.args.font, self.args.font)
+    sty.font.name = self.conf['font'].get(self.args.font, self.args.font)
     sty.element.rPr.rFonts.set(qn('w:eastAsia'),
-      self.EAFONT.get(self.args.eafont, self.args.eafont))
+      self.conf['eafont'].get(self.args.eafont, self.args.eafont))
 
   def save(self) -> None:
     self.doc.save(self.args.out)
     if self.args.do:
       os.startfile(self.args.out, operation=self.args.do)
 
-  def typeset(self, textin, sep=PAGESEP) -> None:
+  def typeset(self, textin, sep=None) -> None:
+    sep = sep or self.conf['pagesep']
     for page in self.paginate(textin, sep):
       if page == sep:
         self.doc.add_page_break()
@@ -172,7 +148,7 @@ class Text2Docx:
 
   def set_head(self, head, fcode) -> None:
     par = head.paragraphs[0]
-    par.alignment = self.HEAD_ALIGN[(fcode.startswith(' '), fcode.endswith(' '))]
+    par.alignment = self.head_align[(fcode.startswith(' '), fcode.endswith(' '))]
     for m in self.head_parser.finditer(fcode):
       if m.group(1):
         self.add_field(par, m.group(1)[1:-1])
@@ -193,20 +169,20 @@ class Text2Docx:
     hdr = table.rows[0].cells
     hdr[0].text = 'font name'
     hdr[1].text = ''
-    for k,fn in self.FONT.items():
+    for k,fn in self.conf['font'].items():
       row = table.add_row().cells
       row[0].width = Mm(50)
       row[1].width = Mm(150)
-      row[0].text = '{0} ({1})'.format(fn,k)
-      r = row[1].paragraphs[0].add_run(self.SAMPLE[0])
+      row[0].text = '{0}\n(--font {1})'.format(fn,k)
+      r = row[1].paragraphs[0].add_run(self.conf['sample']['font'])
       r.font.name = fn
-    for k,fn in self.EAFONT.items():
+    for k,fn in self.conf['eafont'].items():
       row = table.add_row().cells
       row[0].width = Mm(50)
       row[1].width = Mm(150)
-      row[0].text = '{0} ({1})'.format(fn,k)
-      r = row[1].paragraphs[0].add_run(self.SAMPLE[1])
-      r.font.name = self.FONT['lc']
+      row[0].text = '{0}\n(--eafont {1})'.format(fn,k)
+      r = row[1].paragraphs[0].add_run(self.conf['sample']['eafont'])
+      r.font.name = self.conf['font']['lc']
       r._element.rPr.rFonts.set(qn('w:eastAsia'), fn)
 
 if __name__ == '__main__':

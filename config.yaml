@@ -1,0 +1,36 @@
+pagesep: '\x0C'
+page:
+  a3: [297, 420]
+  b4: [257, 364]
+  a4: [210, 297]
+  b5: [182, 257]
+  a5: [148, 210]
+  hagaki: [100, 148]
+
+font:
+  lc: 'Lucida Console'
+  lst: 'Lucida Sans Typewriter'
+eafont:
+  biz: 'BIZ UDゴシック'
+  hg: 'HGｺﾞｼｯｸ'
+  hge: 'HGｺﾞｼｯｸE'
+  hgm: 'HGｺﾞｼｯｸM'
+  meiryo: 'メイリオ'
+  yu: '游ゴシック'
+  ms: 'ＭＳ ゴシック'
+
+default:
+  out: output.docx
+  page: a4
+  margin: [10,10,10,10]
+  size: 14
+  font: lc
+  eafont: hge
+
+head_number: ' [Page {PAGE}/{NUMPAGES}]'
+sample:
+  font: |-
+    The quick brown fox jumps over the lazy dog
+  eafont: |-
+    色は匂へど散りぬるを我が世誰ぞ常ならむ
+    有為の奥山今日越えて浅き夢見し酔ひもせず
