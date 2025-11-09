@@ -26,20 +26,21 @@ class Text2Docx:
     (True, True):   WD_ALIGN_PARAGRAPH.CENTER,
   }
 
-  def __init__(self, textin) -> None:
+  def __init__(self, textin=None) -> None:
     self.conf = self.load_conf()
     self.args = self.get_args()
-    if not self.args.raw:
-      textin = io.TextIOWrapper(textin.buffer, encoding='utf-8')
     self.doc = Document()
     self.set_section(self.doc.sections[0])
     self.set_style(self.doc.styles['Normal'])
     if self.args.col:
       self.set_multicolumn(self.doc.sections[0], self.args.col)
-    if self.args.sample:
-      self.set_sample()
-    else:
-      self.typeset(textin)
+    if textin:
+      if self.args.sample:
+        self.set_sample()
+      else:
+        if not self.args.raw:
+          textin = io.TextIOWrapper(textin.buffer, encoding='utf-8')
+        self.typeset(textin)
 
   def load_conf(self) -> dict:
     fpath = Path(__file__).resolve().parent / 'config.yaml'
