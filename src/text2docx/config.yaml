@@ -1,4 +1,4 @@
-pagesep: '\x0C'
+pagesep: "\x0C"
 page:
   a3: [297, 420]
   b4: [257, 364]
