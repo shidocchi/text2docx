@@ -34,13 +34,12 @@ class Text2Docx:
     self.set_style(self.doc.styles['Normal'])
     if self.args.col:
       self.set_multicolumn(self.doc.sections[0], self.args.col)
-    if textin:
-      if self.args.sample:
-        self.set_sample()
-      else:
-        if not self.args.raw:
-          textin = io.TextIOWrapper(textin.buffer, encoding='utf-8')
-        self.typeset(textin)
+    if self.args.sample:
+      self.set_sample()
+    elif textin:
+      if not self.args.raw:
+        textin = io.TextIOWrapper(textin.buffer, encoding='utf-8')
+      self.typeset(textin)
 
   def load_conf(self) -> dict:
     fpath = Path(__file__).resolve().parent / 'config.yaml'
@@ -122,14 +121,14 @@ class Text2Docx:
       os.startfile(self.args.out, operation=self.args.do)
 
   def typeset(self, textin, sep=None) -> None:
-    sep = sep or self.conf['pagesep']
     for page in self.paginate(textin, sep):
       if page == sep:
         self.doc.add_page_break()
       else:
         self.doc.add_paragraph(page)
 
-  def paginate(self, textin, sep) -> Iterator[str]:
+  def paginate(self, textin, sep=None) -> Iterator[str]:
+    sep = sep or self.conf['pagesep']
     page = []
     for line in textin:
       while True:
@@ -137,13 +136,12 @@ class Text2Docx:
         page.append(part[0])
         if part[1] == '':
           break
-        else:
-          yield ''.join(page)
-          yield sep
-          page = []
-          line = part[2]
-          if not line.rstrip():
-            break
+        yield ''.join(page)
+        yield sep
+        page = []
+        line = part[2]
+        if not line.rstrip():
+          break
     if page:
       yield ''.join(page)
 
