@@ -19,7 +19,13 @@ eafont:
   yu: '游ゴシック'
   ms: 'ＭＳ ゴシック'
 
+choices:
+  enc: ['utf-8', 'cp932', 'euc-jp', 'iso-2022-jp']
+  do: ['print', 'edit', 'open']
+  col: [2, 3]
+
 default:
+  enc: utf-8
   out: output.docx
   page: a4
   margin: [10,10,10,10]
@@ -28,6 +34,7 @@ default:
   eafont: hge
 
 head_number: ' [Page {PAGE}/{NUMPAGES}]'
+head_distance: [5, 5]
 sample:
   font: |-
     The quick brown fox jumps over the lazy dog
