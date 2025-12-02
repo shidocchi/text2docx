@@ -2,7 +2,10 @@ import io
 import os
 import re
 import sys
-import argparse
+from argparse import (
+  Namespace,
+  ArgumentParser,
+  ArgumentDefaultsHelpFormatter)
 import yaml
 from pathlib import Path
 from typing import Iterator
@@ -13,7 +16,7 @@ from docx.oxml.ns import qn
 from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 class Text2Docx:
   """text typesetter"""
@@ -38,7 +41,7 @@ class Text2Docx:
       self.set_sample()
     elif textin:
       if not self.args.raw:
-        textin = io.TextIOWrapper(textin.buffer, encoding='utf-8')
+        textin = io.TextIOWrapper(textin.buffer, encoding=self.args.enc)
       self.typeset(textin)
 
   def load_conf(self) -> dict:
@@ -47,12 +50,16 @@ class Text2Docx:
       conf = yaml.safe_load(f)
     return conf
 
-  def get_args(self) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
+  def get_args(self) -> Namespace:
+    parser = ArgumentParser(
+      formatter_class=ArgumentDefaultsHelpFormatter,
       prog='python -m text2docx',
       description='text typesetter')
-    parser.add_argument('--raw', help='suppress stdin encoding',
+    enc_args = parser.add_mutually_exclusive_group()
+    enc_args.add_argument('--raw', help='suppress encoding',
       action='store_true')
+    enc_args.add_argument('--enc', help='stdin encoding',
+      choices=self.conf['choices']['enc'])
     parser.add_argument('--out', help='output filename')
     parser.add_argument('--page', help='page size',
       choices=self.conf['page'].keys())
@@ -63,7 +70,7 @@ class Text2Docx:
       nargs=4, metavar=('top','bottom','left','right'))
     parser.add_argument('--col', help='multi column',
       type=int,
-      choices=(2,3))
+      choices=self.conf['choices']['col'])
     parser.add_argument('--size', help='font pt',
       type=float)
     parser.add_argument('--font', help='font',
@@ -73,7 +80,7 @@ class Text2Docx:
     parser.add_argument('--sample', help='font sample',
       action='store_true')
     parser.add_argument('--do', help='operation',
-      choices=['print', 'edit', 'open'])
+      choices=self.conf['choices']['do'])
     head_args = parser.add_mutually_exclusive_group()
     head_args.add_argument('--number', help='page number on header',
       action='store_true')
@@ -96,7 +103,7 @@ class Text2Docx:
      sect.left_margin,
      sect.right_margin) = map(Mm, self.args.margin)
     (sect.header_distance,
-     sect.footer_distance) = map(Mm, [5, 5])
+     sect.footer_distance) = map(Mm, self.conf['head_distance'])
     if self.args.number:
       self.set_head(sect.header, self.conf['head_number'])
     elif self.args.header:
